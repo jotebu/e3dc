@@ -1,12 +1,12 @@
 {
     "id": "{C9508720-B23D-B37A-B5C2-97B607221CE1}",
-    "author": "Brovning",
+    "author": "Brovning / jotebu",
     "name": "E3DC",
-    "url": "https://github.com/Brovning/e3dc",
+    "url": "https://github.com/jotebu/e3dc",
     "compatibility": {
         "version": "5.0"
     },
-    "version": "1.6",
+    "version": "2.0",
     "build": 0,
-    "date": 0
+    "date": 20260823
 }

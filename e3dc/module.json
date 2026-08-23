@@ -3,14 +3,17 @@
     "name": "E3DC",
     "type": 3,
     "vendor": "E3DC",
-    "aliases":
-	[
-		"S10 mini",
-		"S10 E",
-		"S10 E Pro",
-		"Quattroporte"
-	],
-    "url": "https://github.com/Brovning/e3dc",
+    "aliases": [
+        "S10 mini",
+        "S10 E",
+        "S10 E Pro",
+        "S10 X",
+        "S20",
+        "S20 X",
+        "S20 X PRO",
+        "Quattroporte"
+    ],
+    "url": "https://github.com/jotebu/e3dc",
     "parentRequirements": [],
     "childRequirements": [],
     "implemented": [],
