@@ -13,11 +13,12 @@ declare(strict_types=1);
  * its configuration form and Modbus instances dynamically.
  *
  * Simple Mode V2.00 extends the power-meter block from register 40105 up to
- * 40184 (20 power meters, IDs 0..19). The existing implementation already
- * calculates the register addresses dynamically; raising E3DC_POWERMETER is
- * therefore sufficient for this register block.
+ * 40184 (20 power meters, IDs 0..19).
  */
 
+if (!defined('E3DC_SIMPLE_MODE_V2')) {
+    define('E3DC_SIMPLE_MODE_V2', true);
+}
 if (!defined('E3DC_WALLBOX')) {
     define('E3DC_WALLBOX', 8);
 }
