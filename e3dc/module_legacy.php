@@ -805,13 +805,27 @@ Bit 5    1 = Ladesperrzeit aktiv: Den Zeitraum für die Ladesperrzeit geben Sie 
 Bit 6    1 = Entladesperrzeit aktiv: Den Zeitraum für die Entladesperrzeit geben Sie in der Funktion SmartCharge ein.;    0 = keine Entladesperrzeit    R"),
 					array(40086, 1, 3, "EMS Remote Control", "int16", "", "EMS Remote Control"),
 					array(40087, 1, 3, "EMS CTRL", "Uint16", "", "EMS CTRL"),
-					array(40137, 1, 3, "SG Ready-Status", "Uint16", "enumerated_sg-ready-status", "SG Ready-Status:
+				);
+				if (!defined('E3DC_SIMPLE_MODE_V2') || !E3DC_SIMPLE_MODE_V2)
+				{
+					$inverterModelRegister_array[] = array(40137, 1, 3, "SG Ready-Status", "Uint16", "enumerated_sg-ready-status", "SG Ready-Status:
 - Betriebszustand 1 (Sperrbetrieb):Dieser Betriebszustand ist abwärtskompatibel zur häufig zufesten Uhrzeiten geschalteten EVU-Sperre und umfasstmaximal 2 Stunden „harte“ Sperrzeit.
 - Betriebszustand 2 (Normalbetrieb):In dieser Schaltung läuft die Wärmepumpe imenergieeffizienten Normalbetrieb mit anteiligerWärmespeicher-Füllung für die maximal zweistündige EVU-Sperre.
 - Betriebszustand 3 (PV-Überschussbetrieb): In diesem Betriebszustand läuft die Wärmepumpe innerhalb des Reglers im verstärkten Betrieb für Raumheizung und Warmwasserbereitung. Es handelt sich dabei nicht um einen definitiven Anlaufbefehl, sondern um eine Einschaltempfehlung entsprechend der heutigen Anhebung.
-- Betriebszustand 4 (Betrieb für Abregelung): Hierbei handelt es sich um einen definitiven Anlaufbefehl, insofern dieser im Rahmen der Regeleinstellungen möglich ist."),
-				);
+- Betriebszustand 4 (Betrieb für Abregelung): Hierbei handelt es sich um einen definitiven Anlaufbefehl, insofern dieser im Rahmen der Regeleinstellungen möglich ist.");
+				}
 				$this->createModbusInstances($inverterModelRegister_array, $categoryId, $gatewayId, $pollCycle);
+
+				// Simple Mode V2.00: Register 40137 is the type register of Powermeter 8.
+				// Remove a stale SG-Ready instance created by an older module version.
+				if (defined('E3DC_SIMPLE_MODE_V2') && E3DC_SIMPLE_MODE_V2)
+				{
+					$legacySgReadyId = @IPS_GetObjectIDByIdent("40137", $categoryId);
+					if (false !== $legacySgReadyId && "SG Ready-Status" == IPS_GetName($legacySgReadyId))
+					{
+						$this->deleteInstanceRecursive($legacySgReadyId);
+					}
+				}
 
 
 				// Autarkie und Eigenverbrauch aus "Autarkie-Eigenverbrauch" erstellen
@@ -1611,6 +1625,15 @@ Bit 13  Nicht belegt";
 					if ($pollCycle != IPS_GetProperty($instanceId, "Poller"))
 					{
 						IPS_SetProperty($instanceId, "Poller", $pollCycle);
+					}
+
+					// S20 / Simple Mode V2.00: verified on S20 X PRO H20_2026_02.
+					// IP-Symcon ByteOrder 3 = Little Endian (Byte Swap).
+					if (defined('E3DC_SIMPLE_MODE_V2') && E3DC_SIMPLE_MODE_V2
+						&& in_array($inverterModelRegister[IMR_START_REGISTER], array(40068, 40070, 40072, 40074, 40076, 40078, 40080), true)
+						&& 3 != IPS_GetProperty($instanceId, "ByteOrder"))
+					{
+						IPS_SetProperty($instanceId, "ByteOrder", 3);
 					}
 					// set length for modbus datatype string
 					if (MODBUSDATATYPE_STRING == $datenTyp && $inverterModelRegister[IMR_SIZE] != IPS_GetProperty($instanceId, "Length"))
