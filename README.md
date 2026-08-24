@@ -1,6 +1,6 @@
 ![Code](https://img.shields.io/badge/Code-PHP-blue.svg)
 [![Version](https://img.shields.io/badge/Symcon-PHPModul-red.svg)](https://www.symcon.de/service/dokumentation/entwicklerbereich/sdk-tools/sdk-php/)
-[![Version](https://img.shields.io/badge/Symcon%20Version-5.0%20%3C-green.svg)](https://community.symcon.de/t/ip-symcon-5-0-verfuegbar/47528)
+[![Version]([https://img.shields.io/badge/Symcon%20Version-9.0%20-green.svg))](https://community.symcon.de/t/symcon-9-0-stable-changelog/40276)
 [![GitHub Stars](https://img.shields.io/github/stars/Brovning/e3dc.svg?logo=github)](https://github.com/Brovning/e3dc/stargazers)
 [![GitHub Release](https://img.shields.io/github/v/release/Brovning/e3dc.svg?logo=github)](https://github.com/Brovning/e3dc/releases)
 
