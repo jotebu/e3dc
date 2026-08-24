@@ -788,14 +788,14 @@ if (!defined('E3DC_WALLBOX'))
 				}
 
 				$inverterModelRegister_array = array(
-					array(40084, 1, 3, "Emergency-Power", "Uint16", "enumerated_emergency-power", "Emergency-Power Status:
+					array(40084, 1, 3, (defined('E3DC_SIMPLE_MODE_V2') && E3DC_SIMPLE_MODE_V2) ? "Notstrom-Betriebsstatus" : "Emergency-Power", "Uint16", "enumerated_emergency-power", "Emergency-Power Status:
 0 = Notstrom wird nicht von Ihrem Gerät unterstützt (bei Geräten der älteren Gerätegeneration, z. B. S10-SP40, S10-P5002).
 1 = Notstrom aktiv (Ausfall des Stromnetzes)
 2 = Notstrom nicht aktiv
 3 = Notstrom nicht verfügbar
 4 = Der Motorschalter des S10 E befindet sich nicht in der richtigen Position, sondern wurde manuell abgeschaltet oder nicht eingeschaltet.
 Hinweis: Falls der Motorschalter nicht bewusst ausgeschaltet wurde, haben Sie eventuell übersehen, den Schieberegler am Motorschalter in die Position 'ON' zu bringen (s. die folgende Abbildung zur Erläuterung)."),
-					array(40085, 1, 3, "EMS-Status", "Uint16", "", "EMS-Status: EMS-Register    Beschreibung    Zugriff
+					array(40085, 1, 3, (defined('E3DC_SIMPLE_MODE_V2') && E3DC_SIMPLE_MODE_V2) ? "EMS-Status (Bitmaske)" : "EMS-Status", "Uint16", "", "EMS-Status: EMS-Register    Beschreibung    Zugriff
 Bit 0    Laden der Batterien ist gesperrt (1)    R
 Bit 1    Entladen der Batterien ist gesperrt (1)    R
 Bit 2    Notstrommodus ist möglich (1) (wenn die Batterien geladen sind)    R
@@ -815,6 +815,18 @@ Bit 6    1 = Entladesperrzeit aktiv: Den Zeitraum für die Entladesperrzeit gebe
 - Betriebszustand 4 (Betrieb für Abregelung): Hierbei handelt es sich um einen definitiven Anlaufbefehl, insofern dieser im Rahmen der Regeleinstellungen möglich ist.");
 				}
 				$this->createModbusInstances($inverterModelRegister_array, $categoryId, $gatewayId, $pollCycle);
+
+				if (defined('E3DC_SIMPLE_MODE_V2') && E3DC_SIMPLE_MODE_V2)
+				{
+					// Keep the existing register idents and object IDs, but migrate the visible names.
+					$emergencyInstanceId = IPS_GetObjectIDByIdent("40084", $categoryId);
+					IPS_SetName($emergencyInstanceId, "Notstrom-Betriebsstatus");
+					$this->MaintainInstanceVariable("Klartext", "Klartext", VARIABLETYPE_STRING, "", 0, true, $emergencyInstanceId, "KNX-tauglicher Klartext, maximal 14 Zeichen");
+
+					$emsInstanceId = IPS_GetObjectIDByIdent("40085", $categoryId);
+					IPS_SetName($emsInstanceId, "EMS-Status (Bitmaske)");
+					$this->MaintainInstanceVariable("Klartext", "Klartext", VARIABLETYPE_STRING, "", 0, true, $emsInstanceId, "KNX-tauglicher Klartext, maximal 14 Zeichen");
+				}
 
 				// Simple Mode V2.00: Register 40137 is the type register of Powermeter 8.
 				// Remove a stale SG-Ready instance created by an older module version.
@@ -857,18 +869,33 @@ Bit 6    1 = Entladesperrzeit aktiv: Den Zeitraum für die Entladesperrzeit gebe
 				IPS_SetHidden($varId, true);
 
 				$bitArray = array(
-					array('varName' => "Batterie laden", 'varProfile' => "~Lock", 'varInfo' => "Bit 0: Laden der Batterien ist gesperrt (1)    R"),
-					array('varName' => "Batterie entladen", 'varProfile' => "~Lock", 'varInfo' => "Bit 1: Entladen der Batterien ist gesperrt (1)    R"),
-					array('varName' => "Notstrommodus", 'varProfile' => "~Switch", 'varInfo' => "Bit 2: Notstrommodus ist möglich (1) (wenn die Batterien geladen sind)    R"),
-					array('varName' => "Wetterbasiertes Laden", 'varProfile' => "~Switch", 'varInfo' => "Bit 3: Wetterbasiertes Laden: 1 = Es wird Ladekapazität zurückgehalten, damit der erwartete Sonnenschein maximal ausgenutzt werden kann. Dies ist nötig, wenn die maximale Einspeisung begrenzt ist.;        0 = Es wird keine Ladekapazität zurückgehalten    R"),
-					array('varName' => "Abregelungs-Status", 'varProfile' => "~Alert", 'varInfo' => "Bit 4: Abregelungs-Status: 1 = Die Ausgangsleistung des S10 Hauskraftwerks wird abgeregelt, da die maximale Einspeisung erreicht ist;    0 = Dieser Fall ist nicht eingetreten    R"),
-					array('varName' => "Ladesperrzeit", 'varProfile' => "~Switch", 'varInfo' => "Bit 5: 1 = Ladesperrzeit aktiv: Den Zeitraum für die Ladesperrzeit geben Sie in der Funktion SmartCharge ein.;    0 = keine Ladesperrzeit    R"),
-					array('varName' => "Entladesperrzeit", 'varProfile' => "~Switch", 'varInfo' => "Bit 6: 1 = Entladesperrzeit aktiv: Den Zeitraum für die Entladesperrzeit geben Sie in der Funktion SmartCharge ein.;    0 = keine Entladesperrzeit    R"),
+					array('identName' => "Batterie laden", 'varName' => (defined('E3DC_SIMPLE_MODE_V2') && E3DC_SIMPLE_MODE_V2) ? "Batterieladung" : "Batterie laden", 'varProfile' => "~Lock", 'varInfo' => "Bit 0: Laden der Batterien ist gesperrt (1)    R"),
+					array('identName' => "Batterie entladen", 'varName' => (defined('E3DC_SIMPLE_MODE_V2') && E3DC_SIMPLE_MODE_V2) ? "Batterieentladung" : "Batterie entladen", 'varProfile' => "~Lock", 'varInfo' => "Bit 1: Entladen der Batterien ist gesperrt (1)    R"),
+					array('identName' => "Notstrommodus", 'varName' => (defined('E3DC_SIMPLE_MODE_V2') && E3DC_SIMPLE_MODE_V2) ? "Notstrom verfügbar" : "Notstrommodus", 'varProfile' => (defined('E3DC_SIMPLE_MODE_V2') && E3DC_SIMPLE_MODE_V2) ? MODUL_PREFIX.".NotstromVerfuegbar.Bool" : "~Switch", 'varInfo' => "Bit 2: Notstrommodus ist möglich (1) (wenn die Batterien geladen sind)    R"),
+					array('identName' => "Wetterbasiertes Laden", 'varName' => (defined('E3DC_SIMPLE_MODE_V2') && E3DC_SIMPLE_MODE_V2) ? "Wetterbasiertes Laden aktiv" : "Wetterbasiertes Laden", 'varProfile' => "~Switch", 'varInfo' => "Bit 3: Wetterbasiertes Laden: 1 = Es wird Ladekapazität zurückgehalten, damit der erwartete Sonnenschein maximal ausgenutzt werden kann. Dies ist nötig, wenn die maximale Einspeisung begrenzt ist.;        0 = Es wird keine Ladekapazität zurückgehalten    R"),
+					array('identName' => "Abregelungs-Status", 'varName' => (defined('E3DC_SIMPLE_MODE_V2') && E3DC_SIMPLE_MODE_V2) ? "Abregelung aktiv" : "Abregelungs-Status", 'varProfile' => "~Alert", 'varInfo' => "Bit 4: Abregelungs-Status: 1 = Die Ausgangsleistung des S10 Hauskraftwerks wird abgeregelt, da die maximale Einspeisung erreicht ist;    0 = Dieser Fall ist nicht eingetreten    R"),
+					array('identName' => "Ladesperrzeit", 'varName' => (defined('E3DC_SIMPLE_MODE_V2') && E3DC_SIMPLE_MODE_V2) ? "Ladesperrzeit aktiv" : "Ladesperrzeit", 'varProfile' => "~Switch", 'varInfo' => "Bit 5: 1 = Ladesperrzeit aktiv: Den Zeitraum für die Ladesperrzeit geben Sie in der Funktion SmartCharge ein.;    0 = keine Ladesperrzeit    R"),
+					array('identName' => "Entladesperrzeit", 'varName' => (defined('E3DC_SIMPLE_MODE_V2') && E3DC_SIMPLE_MODE_V2) ? "Entladesperrzeit aktiv" : "Entladesperrzeit", 'varProfile' => "~Switch", 'varInfo' => "Bit 6: 1 = Entladesperrzeit aktiv: Den Zeitraum für die Entladesperrzeit geben Sie in der Funktion SmartCharge ein.;    0 = keine Entladesperrzeit    R"),
 				);
 
 				foreach ($bitArray as $bit)
 				{
-					$varId = $this->MaintainInstanceVariable($this->removeInvalidChars($bit['varName']), $bit['varName'], VARIABLETYPE_BOOLEAN, $bit['varProfile'], 0, true, $instanceId, $bit['varInfo']);
+					$ident = $this->removeInvalidChars($bit['identName']);
+					$varId = $this->MaintainInstanceVariable($ident, $bit['varName'], VARIABLETYPE_BOOLEAN, $bit['varProfile'], 0, true, $instanceId, $bit['varInfo']);
+					if (defined('E3DC_SIMPLE_MODE_V2') && E3DC_SIMPLE_MODE_V2 && false !== $varId)
+					{
+						if (IPS_GetName($varId) != $bit['varName'])
+						{
+							IPS_SetName($varId, $bit['varName']);
+						}
+
+						// Existing variables keep their object ID/Ident, but must receive the new V2 profile as well.
+						$variable = IPS_GetVariable($varId);
+						if ($variable['VariableCustomProfile'] != $bit['varProfile'])
+						{
+							IPS_SetVariableCustomProfile($varId, $bit['varProfile']);
+						}
+					}
 				}
 
 
@@ -2236,6 +2263,21 @@ Bit 13  Nicht belegt";
 						);
 			 */
 			$this->createVarProfile(
+				MODUL_PREFIX.".NotstromVerfuegbar.Bool",
+				VARIABLETYPE_BOOLEAN,
+				'',
+				0,
+				0,
+				0,
+				0,
+				0,
+				array(
+					array('Name' => "Nicht verfügbar", 'Wert' => 0, 'Farbe' => -1),
+					array('Name' => "Verfügbar", 'Wert' => 1, 'Farbe' => $this->getRgbColor("green")),
+				)
+			);
+
+			$this->createVarProfile(
 				MODUL_PREFIX.".Emergency-Power.Int",
 				VARIABLETYPE_INTEGER,
 				'',
@@ -2406,6 +2448,61 @@ Bit 13  Nicht belegt";
 			public functions
 		 */
 
+		private function getEmergencyPowerText(int $value): string
+		{
+			$texts = array(
+				0 => "Nicht unterst.",
+				1 => "Notstrom aktiv",
+				2 => "Nicht aktiv",
+				3 => "Nicht verfuegb",
+				4 => "Fehler",
+			);
+
+			return isset($texts[$value]) ? $texts[$value] : "Unbekannt";
+		}
+
+		private function getEmsStatusText(int $value): string
+		{
+			// Only bits 0..6 are documented. Unknown bits take precedence.
+			if (0 != ($value & ~0x7F))
+			{
+				return "Unbekannt";
+			}
+
+			$specialStates = array(
+				0 => "Laden gesperrt",
+				1 => "Entl. gesperrt",
+				3 => "Wetterladen",
+				4 => "Abregelung",
+				5 => "Ladesperrzeit",
+				6 => "Entladesperre",
+			);
+
+			$activeSpecialStates = array();
+			foreach ($specialStates as $bit => $text)
+			{
+				if (0 != ($value & (1 << $bit)))
+				{
+					$activeSpecialStates[] = $text;
+				}
+			}
+
+			if (1 < count($activeSpecialStates))
+			{
+				return "Mehrere Status";
+			}
+			if (1 == count($activeSpecialStates))
+			{
+				return $activeSpecialStates[0];
+			}
+			if (0 != ($value & (1 << 2)))
+			{
+				return "NS verfuegbar";
+			}
+
+			return "Normal";
+		}
+
 		public function CyclicDataUpdate()
 		{
 			// Update Autarkie-Eigenverbrauch
@@ -2428,6 +2525,19 @@ Bit 13  Nicht belegt";
 				SetValue($EigenverbrauchId, $Eigenverbrauch);
 			}
 
+			// Update Notstrom-Betriebsstatus Klartext
+			if (defined('E3DC_SIMPLE_MODE_V2') && E3DC_SIMPLE_MODE_V2)
+			{
+				$emergencyInstanceId = IPS_GetObjectIDByIdent("40084", $this->InstanceID);
+				$emergencyValueId = IPS_GetObjectIDByIdent("Value", $emergencyInstanceId);
+				$emergencyTextId = IPS_GetObjectIDByIdent("Klartext", $emergencyInstanceId);
+				$emergencyText = $this->getEmergencyPowerText((int)GetValue($emergencyValueId));
+				if (GetValue($emergencyTextId) != $emergencyText)
+				{
+					SetValue($emergencyTextId, $emergencyText);
+				}
+			}
+
 			// Update EMS-Status
 			$instanceId = IPS_GetObjectIDByIdent("40085", $this->InstanceID);
 			$varId = IPS_GetObjectIDByIdent("Value", $instanceId);
@@ -2443,6 +2553,16 @@ Bit 13  Nicht belegt";
 				if (GetValue($bitId) != $bitValue)
 				{
 					SetValue($bitId, $bitValue);
+				}
+			}
+
+			if (defined('E3DC_SIMPLE_MODE_V2') && E3DC_SIMPLE_MODE_V2)
+			{
+				$emsTextId = IPS_GetObjectIDByIdent("Klartext", $instanceId);
+				$emsText = $this->getEmsStatusText((int)$varValue);
+				if (GetValue($emsTextId) != $emsText)
+				{
+					SetValue($emsTextId, $emsText);
 				}
 			}
 
