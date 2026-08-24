@@ -1,7 +1,8 @@
 ![Code](https://img.shields.io/badge/Code-PHP-blue.svg)
 [![Version](https://img.shields.io/badge/Symcon-PHPModul-red.svg)](https://www.symcon.de/service/dokumentation/entwicklerbereich/sdk-tools/sdk-php/)
 [![Version](https://img.shields.io/badge/Symcon%20Version-9.0%20-green.svg)](https://community.symcon.de/t/symcon-9-0-stable-changelog/40276)
-[![GitHub Release](https://img.shields.io/github/v/release/jotebu/e3dc.svg?logo=github)](https://github.com/jotebu/e3dc)
+[![GitHub Release](https://img.shields.io/github/v/release/jotebu/e3dc
+)](https://github.com/jotebu/e3dc)
 
 
 # E3DC
