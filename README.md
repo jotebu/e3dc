@@ -790,6 +790,30 @@ Aktiviert die Schuko-Steckdose der Wallbox $WallboxId (von 0 bis 7) der E3DC-Ins
 
 ### 8. Versionshistorie
 
+#### v2.3, 24.08.2026
+- Klartext-Anzeige direkt im Integer für Notstrom-Betriebsstatus (Register 40084)
+- Klartext-Anzeige direkt im Integer für EMS-Status/Bitmaske (Register 40085)
+- S20-spezifische Variablenprofile für Notstrom- und EMS-Status ergänzt
+- Profile werden bei Neuinstallation und Update automatisch angelegt bzw. aktualisiert
+
+#### v2.2, 24.08.2026
+- Notstrom-Betriebsstatus (Register 40084) und EMS-Status (Register 40085) für S20 überarbeitet
+- Zusätzliche Klartext-Variablen mit maximal 14 Zeichen für eine spätere KNX-Weiterleitung ergänzt
+- EMS-Bitstatus verständlicher benannt
+- Notstrom-Verfügbarkeit mit eigenem Profil `Verfügbar` / `Nicht verfügbar` ergänzt
+
+#### v2.1, 24.08.2026
+- Nach dem Speichern der Konfiguration werden die Modbus-Werte einmal direkt eingelesen
+- DC-Werte des Wechselrichters in `DC-Eingang 1` bis `DC-Eingang 3` umbenannt
+
+#### v2.0, 23.08.2026
+- Unterstützung für E3/DC S10 X, S20, S20 X und S20 X PRO / Simple Mode V2.00 ergänzt
+- Leistungsmesser/Powermeter von 8 auf 20 IDs (0 bis 19) erweitert
+- Registerkonflikt bei 40137 zwischen SG-Ready und Powermeter 8 für S20 behoben
+- Byte-Reihenfolge der 32-Bit-Leistungsregister für S20 automatisch korrigiert
+- S20-Wechselrichterregister und DC-Eingänge anhand realer S20-X-PRO-Messwerte korrigiert
+- Bestehende S10-Unterstützung über getrennte Legacy-Implementierung beibehalten
+
 #### v1.6 patch 2, 26.02.2022
 - Register für Wechselrichter hinzugefügt (ab SW-Version >=S10_2022_02) 
 - Maximal nutzbare Batteriekapazität konfigurierbar (Alterung kann berücksichtigt werden)
