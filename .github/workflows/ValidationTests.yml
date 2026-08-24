@@ -5,16 +5,16 @@ on: [push, pull_request]
 jobs:
 
   test:
- 
-    runs-on: ubuntu-latest
- 
-    steps:
-    - uses: actions/checkout@v1
-      with:
-          submodules: true
 
-    - name: Install latest PHPUnit
-      run: wget https://phar.phpunit.de/phpunit.phar
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Install PHPUnit 12
+      run: wget -O phpunit.phar https://phar.phpunit.de/phpunit-12.phar
 
     - name: Run Tests
       run: phpdbg -qrr phpunit.phar tests
