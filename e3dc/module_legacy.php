@@ -788,14 +788,14 @@ if (!defined('E3DC_WALLBOX'))
 				}
 
 				$inverterModelRegister_array = array(
-					array(40084, 1, 3, (defined('E3DC_SIMPLE_MODE_V2') && E3DC_SIMPLE_MODE_V2) ? "Notstrom-Betriebsstatus" : "Emergency-Power", "Uint16", "enumerated_emergency-power", "Emergency-Power Status:
+					array(40084, 1, 3, (defined('E3DC_SIMPLE_MODE_V2') && E3DC_SIMPLE_MODE_V2) ? "Notstrom-Betriebsstatus" : "Emergency-Power", "Uint16", (defined('E3DC_SIMPLE_MODE_V2') && E3DC_SIMPLE_MODE_V2) ? "enumerated_emergency-power-s20" : "enumerated_emergency-power", "Emergency-Power Status:
 0 = Notstrom wird nicht von Ihrem Gerät unterstützt (bei Geräten der älteren Gerätegeneration, z. B. S10-SP40, S10-P5002).
 1 = Notstrom aktiv (Ausfall des Stromnetzes)
 2 = Notstrom nicht aktiv
 3 = Notstrom nicht verfügbar
 4 = Der Motorschalter des S10 E befindet sich nicht in der richtigen Position, sondern wurde manuell abgeschaltet oder nicht eingeschaltet.
 Hinweis: Falls der Motorschalter nicht bewusst ausgeschaltet wurde, haben Sie eventuell übersehen, den Schieberegler am Motorschalter in die Position 'ON' zu bringen (s. die folgende Abbildung zur Erläuterung)."),
-					array(40085, 1, 3, (defined('E3DC_SIMPLE_MODE_V2') && E3DC_SIMPLE_MODE_V2) ? "EMS-Status (Bitmaske)" : "EMS-Status", "Uint16", "", "EMS-Status: EMS-Register    Beschreibung    Zugriff
+					array(40085, 1, 3, (defined('E3DC_SIMPLE_MODE_V2') && E3DC_SIMPLE_MODE_V2) ? "EMS-Status (Bitmaske)" : "EMS-Status", "Uint16", (defined('E3DC_SIMPLE_MODE_V2') && E3DC_SIMPLE_MODE_V2) ? "enumerated_ems-status" : "", "EMS-Status: EMS-Register    Beschreibung    Zugriff
 Bit 0    Laden der Batterien ist gesperrt (1)    R
 Bit 1    Entladen der Batterien ist gesperrt (1)    R
 Bit 2    Notstrommodus ist möglich (1) (wenn die Batterien geladen sind)    R
@@ -814,6 +814,12 @@ Bit 6    1 = Entladesperrzeit aktiv: Den Zeitraum für die Entladesperrzeit gebe
 - Betriebszustand 3 (PV-Überschussbetrieb): In diesem Betriebszustand läuft die Wärmepumpe innerhalb des Reglers im verstärkten Betrieb für Raumheizung und Warmwasserbereitung. Es handelt sich dabei nicht um einen definitiven Anlaufbefehl, sondern um eine Einschaltempfehlung entsprechend der heutigen Anhebung.
 - Betriebszustand 4 (Betrieb für Abregelung): Hierbei handelt es sich um einen definitiven Anlaufbefehl, insofern dieser im Rahmen der Regeleinstellungen möglich ist.");
 				}
+				if (defined('E3DC_SIMPLE_MODE_V2') && E3DC_SIMPLE_MODE_V2)
+				{
+					// Profiles must exist before createModbusInstances() resolves custom profiles.
+					$this->ensureS20V2StatusProfiles();
+				}
+
 				$this->createModbusInstances($inverterModelRegister_array, $categoryId, $gatewayId, $pollCycle);
 
 				if (defined('E3DC_SIMPLE_MODE_V2') && E3DC_SIMPLE_MODE_V2)
@@ -822,10 +828,20 @@ Bit 6    1 = Entladesperrzeit aktiv: Den Zeitraum für die Entladesperrzeit gebe
 					$emergencyInstanceId = IPS_GetObjectIDByIdent("40084", $categoryId);
 					IPS_SetName($emergencyInstanceId, "Notstrom-Betriebsstatus");
 					$this->MaintainInstanceVariable("Klartext", "Klartext", VARIABLETYPE_STRING, "", 0, true, $emergencyInstanceId, "KNX-tauglicher Klartext, maximal 14 Zeichen");
+					$emergencyValueId = IPS_GetObjectIDByIdent("Value", $emergencyInstanceId);
+					if (IPS_GetVariable($emergencyValueId)['VariableCustomProfile'] != MODUL_PREFIX.".Emergency-Power-S20.Int")
+					{
+						IPS_SetVariableCustomProfile($emergencyValueId, MODUL_PREFIX.".Emergency-Power-S20.Int");
+					}
 
 					$emsInstanceId = IPS_GetObjectIDByIdent("40085", $categoryId);
 					IPS_SetName($emsInstanceId, "EMS-Status (Bitmaske)");
 					$this->MaintainInstanceVariable("Klartext", "Klartext", VARIABLETYPE_STRING, "", 0, true, $emsInstanceId, "KNX-tauglicher Klartext, maximal 14 Zeichen");
+					$emsValueId = IPS_GetObjectIDByIdent("Value", $emsInstanceId);
+					if (IPS_GetVariable($emsValueId)['VariableCustomProfile'] != MODUL_PREFIX.".EMS-Status.Int")
+					{
+						IPS_SetVariableCustomProfile($emsValueId, MODUL_PREFIX.".EMS-Status.Int");
+					}
 				}
 
 				// Simple Mode V2.00: Register 40137 is the type register of Powermeter 8.
@@ -2108,6 +2124,14 @@ Bit 13  Nicht belegt";
 			{
 				$profile = MODUL_PREFIX.".Emergency-Power.Int";
 			}
+			elseif ("enumerated_emergency-power-s20" == strtolower($unit))
+			{
+				$profile = MODUL_PREFIX.".Emergency-Power-S20.Int";
+			}
+			elseif ("enumerated_ems-status" == strtolower($unit))
+			{
+				$profile = MODUL_PREFIX.".EMS-Status.Int";
+			}
 			elseif ("enumerated_powermeter" == strtolower($unit))
 			{
 				$profile = MODUL_PREFIX.".Powermeter.Int";
@@ -2139,6 +2163,60 @@ Bit 13  Nicht belegt";
 			return $profile;
 		}
 
+
+		private function ensureS20V2StatusProfiles(): void
+		{
+			$emergencyProfile = MODUL_PREFIX.".Emergency-Power-S20.Int";
+			$this->createVarProfile(
+				$emergencyProfile,
+				VARIABLETYPE_INTEGER,
+				'',
+				0,
+				4,
+				1,
+				0,
+				0,
+				array(
+					array('Name' => "Nicht unterst.", 'Wert' => 0, 'Farbe' => 16753920),
+					array('Name' => "Notstrom aktiv", 'Wert' => 1, 'Farbe' => $this->getRgbColor("green")),
+					array('Name' => "Nicht aktiv", 'Wert' => 2, 'Farbe' => -1),
+					array('Name' => "Nicht verfuegb", 'Wert' => 3, 'Farbe' => 16753920),
+					array('Name' => "Fehler", 'Wert' => 4, 'Farbe' => $this->getRgbColor("red")),
+				)
+			);
+
+			if (IPS_VariableProfileExists($emergencyProfile))
+			{
+				IPS_SetVariableProfileValues($emergencyProfile, 0, 4, 1);
+				IPS_SetVariableProfileAssociation($emergencyProfile, 0, "Nicht unterst.", '', 16753920);
+				IPS_SetVariableProfileAssociation($emergencyProfile, 1, "Notstrom aktiv", '', $this->getRgbColor("green"));
+				IPS_SetVariableProfileAssociation($emergencyProfile, 2, "Nicht aktiv", '', -1);
+				IPS_SetVariableProfileAssociation($emergencyProfile, 3, "Nicht verfuegb", '', 16753920);
+				IPS_SetVariableProfileAssociation($emergencyProfile, 4, "Fehler", '', $this->getRgbColor("red"));
+			}
+
+			$emsProfile = MODUL_PREFIX.".EMS-Status.Int";
+			$this->createVarProfile(
+				$emsProfile,
+				VARIABLETYPE_INTEGER,
+				'',
+				0,
+				65535,
+				1,
+				0,
+				0,
+				array()
+			);
+
+			if (IPS_VariableProfileExists($emsProfile))
+			{
+				IPS_SetVariableProfileValues($emsProfile, 0, 65535, 1);
+				for ($emsProfileValue = 0; $emsProfileValue <= 127; $emsProfileValue++)
+				{
+					IPS_SetVariableProfileAssociation($emsProfile, $emsProfileValue, $this->getEmsStatusText($emsProfileValue), '', -1);
+				}
+			}
+		}
 
 		private function checkProfiles()
 		{
@@ -2294,6 +2372,11 @@ Bit 13  Nicht belegt";
 					array('Name' => "Fehler", 'Wert' => 4, "Der Motorschalter des S10 E befindet sich nicht in der richtigen Position, sondern wurde manuell abgeschaltet oder nicht eingeschaltet.", 'Farbe' => $this->getRgbColor("red")),
 				)
 			);
+
+			if (defined('E3DC_SIMPLE_MODE_V2') && E3DC_SIMPLE_MODE_V2)
+			{
+				$this->ensureS20V2StatusProfiles();
+			}
 
 			$this->createVarProfile(
 				MODUL_PREFIX.".Powermeter.Int",
