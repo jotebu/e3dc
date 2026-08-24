@@ -1314,6 +1314,85 @@ Bit 13  Nicht belegt";
 					$startOffsetAddress = 41000;
 					$startOffsetRegister = $startOffsetAddress - MODBUS_REGISTER_TO_ADDRESS_OFFSET;
 
+					if (defined('E3DC_SIMPLE_MODE_V2') && E3DC_SIMPLE_MODE_V2)
+					{
+						// S20 / Simple Mode V2.00: verified inverter mapping.
+						// The V2 inverter block uses the confirmed ReadAddress mapping 41000..41032.
+						// Reactive-power registers are intentionally not exposed here until their
+						// V2 semantics are verified; an Int32 at 41016 would overlap AC voltage L1 at 41017.
+						// Remove old WR_* ModBus objects once when the legacy shifted layout is detected.
+						if (false !== $categoryId)
+						{
+							$legacyWrLayout = false;
+							foreach (IPS_GetChildrenIDs($categoryId) as $childId)
+							{
+								$instance = @IPS_GetInstance($childId);
+								if (isset($instance['ModuleInfo']['ModuleID']) && MODBUS_ADDRESSES == $instance['ModuleInfo']['ModuleID']
+									&& 0 === strpos(IPS_GetName($childId), "WR_")
+									&& false !== strpos(IPS_GetName($childId), "_AC-Spannung_L1"))
+								{
+									$config = json_decode(IPS_GetConfiguration($childId), true);
+									if (isset($config['ReadAddress']) && 18 == (($config['ReadAddress'] - $startOffsetAddress) % 34))
+									{
+										$legacyWrLayout = true;
+										break;
+									}
+								}
+							}
+
+							if ($legacyWrLayout)
+							{
+								foreach (IPS_GetChildrenIDs($categoryId) as $childId)
+								{
+									$instance = @IPS_GetInstance($childId);
+									if (isset($instance['ModuleInfo']['ModuleID']) && MODBUS_ADDRESSES == $instance['ModuleInfo']['ModuleID']
+										&& 0 === strpos(IPS_GetName($childId), "WR_"))
+									{
+										$this->deleteInstanceRecursive($childId);
+									}
+								}
+							}
+						}
+
+						for($i = 0; $i<E3DC_INVERTER; $i++)
+						{
+							$v2InverterRegisters = array(
+								array($startOffsetRegister + 0  + ($i * 34), 2, 3, "WR_".$inverterName[$i]."_Scheinleistung_L1", "int32", "W", "Scheinleistung in Watt L1"),
+								array($startOffsetRegister + 2  + ($i * 34), 2, 3, "WR_".$inverterName[$i]."_Scheinleistung_L2", "int32", "W", "Scheinleistung in Watt L2"),
+								array($startOffsetRegister + 4  + ($i * 34), 2, 3, "WR_".$inverterName[$i]."_Scheinleistung_L3", "int32", "W", "Scheinleistung in Watt L3"),
+								array($startOffsetRegister + 6  + ($i * 34), 2, 3, "WR_".$inverterName[$i]."_Wirkleistung_L1", "int32", "W", "Wirkleistung in Watt L1"),
+								array($startOffsetRegister + 8  + ($i * 34), 2, 3, "WR_".$inverterName[$i]."_Wirkleistung_L2", "int32", "W", "Wirkleistung in Watt L2"),
+								array($startOffsetRegister + 10 + ($i * 34), 2, 3, "WR_".$inverterName[$i]."_Wirkleistung_L3", "int32", "W", "Wirkleistung in Watt L3; S20 X PRO H20_2026_02 lieferte im Test 0 W trotz aktiver Phase L3"),
+								array($startOffsetRegister + 17 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_AC-Spannung_L1", "int16", "V", "AC-Spannung in Volt L1", 0.1),
+								array($startOffsetRegister + 18 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_AC-Spannung_L2", "int16", "V", "AC-Spannung in Volt L2", 0.1),
+								array($startOffsetRegister + 19 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_AC-Spannung_L3", "int16", "V", "AC-Spannung in Volt L3", 0.1),
+								array($startOffsetRegister + 20 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_AC-Strom_L1", "int16", "A", "AC-Strom in Ampere L1", 0.01),
+								array($startOffsetRegister + 21 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_AC-Strom_L2", "int16", "A", "AC-Strom in Ampere L2", 0.01),
+								array($startOffsetRegister + 22 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_AC-Strom_L3", "int16", "A", "AC-Strom in Ampere L3", 0.01),
+								array($startOffsetRegister + 23 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_Phasen-Frequenz_L1", "int16", "Hz", "Phasen-Frequenz in Hertz", 0.01),
+								array($startOffsetRegister + 24 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_DC-Leistung_L1", "int16", "W", "DC-Leistung in Watt L1"),
+								array($startOffsetRegister + 25 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_DC-Leistung_L2", "int16", "W", "DC-Leistung in Watt L2"),
+								array($startOffsetRegister + 26 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_DC-Leistung_L3", "int16", "W", "DC-Leistung in Watt L3"),
+								array($startOffsetRegister + 27 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_DC-Spannung_L1", "int16", "V", "DC-Spannung in Volt L1", 0.1),
+								array($startOffsetRegister + 28 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_DC-Spannung_L2", "int16", "V", "DC-Spannung in Volt L2", 0.1),
+								array($startOffsetRegister + 29 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_DC-Spannung_L3", "int16", "V", "DC-Spannung in Volt L3", 0.1),
+								array($startOffsetRegister + 30 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_DC-Strom_L1", "int16", "A", "DC-Strom in Ampere L1", 0.01),
+								array($startOffsetRegister + 31 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_DC-Strom_L2", "int16", "A", "DC-Strom in Ampere L2", 0.01),
+								array($startOffsetRegister + 32 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_DC-Strom_L3", "int16", "A", "DC-Strom in Ampere L3", 0.01),
+							);
+
+							if ($readInverter[$i])
+							{
+								$inverterModelRegister_array = array_merge($inverterModelRegister_array, $v2InverterRegisters);
+							}
+							else
+							{
+								$inverterModelRegisterDel_array = array_merge($inverterModelRegisterDel_array, $v2InverterRegisters);
+							}
+						}
+					}
+					else
+					{
 					for($i = 0; $i<E3DC_INVERTER; $i++)
 					{
 						if ($readInverter[$i])
@@ -1372,6 +1451,7 @@ Bit 13  Nicht belegt";
 							$inverterModelRegisterDel_array[] = array($startOffsetRegister + 32 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_DC-Strom_L2", "int16", "A", "DC-Strom in Ampere L2", 0.01);
 	//						$inverterModelRegisterDel_array[] = array($startOffsetRegister + 33 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_DC-Strom_L3", "int16", "A", "DC-Strom in Ampere L3 (wird nicht verwendet)", 0.01);
 						}
+					}
 					}
 
 					if ($readInverter[0] || $readInverter[1] || $readInverter[2] || $readInverter[3] || $readInverter[4] || $readInverter[5] || $readInverter[6] || $readInverter[7])
@@ -2463,22 +2543,38 @@ Bit 13  Nicht belegt";
 					$startOffsetAddress = 41000;
 					$startOffsetRegister = $startOffsetAddress - MODBUS_REGISTER_TO_ADDRESS_OFFSET;
 
-					for($i = 0; $i<E3DC_INVERTER; $i++)
+					if (defined('E3DC_SIMPLE_MODE_V2') && E3DC_SIMPLE_MODE_V2)
 					{
-						if ($readInverter[$i])
+						for($i = 0; $i<E3DC_INVERTER; $i++)
 						{
-							$modbusAddress_Array[] = $startOffsetRegister + 1 + ($i * 34);	// 0 with int32 not working --> 1 with int16
-							$modbusAddress_Array[] = $startOffsetRegister + 3 + ($i * 34);	// 2 with int32 not working --> 3 with int16
-							$modbusAddress_Array[] = $startOffsetRegister + 5 + ($i * 34);	// 4 with int32 not working --> 5 with int16
-							$modbusAddress_Array[] = $startOffsetRegister + 7 + ($i * 34);	// 6 with int32 not working --> 7 with int16
-							$modbusAddress_Array[] = $startOffsetRegister + 9 + ($i * 34);	// 8 with int32 not working --> 9 with int16
-							$modbusAddress_Array[] = $startOffsetRegister + 11 + ($i * 34);	// 10 with int32 not working --> 11 with int16
-							$modbusAddress_Array[] = $startOffsetRegister + 13 + ($i * 34);	// 12 with int32 not working --> 13 with int16
-							$modbusAddress_Array[] = $startOffsetRegister + 15 + ($i * 34);	// 14 with int32 not working --> 15 with int16
-							$modbusAddress_Array[] = $startOffsetRegister + 17 + ($i * 34);	// 16 with int32 not working --> 17 with int16
-							$modbusAddress_Array[] = $startOffsetRegister + 25 + ($i * 34);
-							$modbusAddress_Array[] = $startOffsetRegister + 26 + ($i * 34);
-	//						$modbusAddress_Array[] = $startOffsetRegister + 27 + ($i * 34);
+							if ($readInverter[$i])
+							{
+								foreach (array(0, 2, 4, 6, 8, 10, 24, 25, 26) as $offset)
+								{
+									$modbusAddress_Array[] = $startOffsetRegister + $offset + ($i * 34);
+								}
+							}
+						}
+					}
+					else
+					{
+						for($i = 0; $i<E3DC_INVERTER; $i++)
+						{
+							if ($readInverter[$i])
+							{
+								$modbusAddress_Array[] = $startOffsetRegister + 1 + ($i * 34);	// 0 with int32 not working --> 1 with int16
+								$modbusAddress_Array[] = $startOffsetRegister + 3 + ($i * 34);	// 2 with int32 not working --> 3 with int16
+								$modbusAddress_Array[] = $startOffsetRegister + 5 + ($i * 34);	// 4 with int32 not working --> 5 with int16
+								$modbusAddress_Array[] = $startOffsetRegister + 7 + ($i * 34);	// 6 with int32 not working --> 7 with int16
+								$modbusAddress_Array[] = $startOffsetRegister + 9 + ($i * 34);	// 8 with int32 not working --> 9 with int16
+								$modbusAddress_Array[] = $startOffsetRegister + 11 + ($i * 34);	// 10 with int32 not working --> 11 with int16
+								$modbusAddress_Array[] = $startOffsetRegister + 13 + ($i * 34);	// 12 with int32 not working --> 13 with int16
+								$modbusAddress_Array[] = $startOffsetRegister + 15 + ($i * 34);	// 14 with int32 not working --> 15 with int16
+								$modbusAddress_Array[] = $startOffsetRegister + 17 + ($i * 34);	// 16 with int32 not working --> 17 with int16
+								$modbusAddress_Array[] = $startOffsetRegister + 25 + ($i * 34);
+								$modbusAddress_Array[] = $startOffsetRegister + 26 + ($i * 34);
+	//							$modbusAddress_Array[] = $startOffsetRegister + 27 + ($i * 34);
+							}
 						}
 					}
 
