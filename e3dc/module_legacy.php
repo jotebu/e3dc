@@ -1370,15 +1370,15 @@ Bit 13  Nicht belegt";
 								array($startOffsetRegister + 21 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_AC-Strom_L2", "int16", "A", "AC-Strom in Ampere L2", 0.01),
 								array($startOffsetRegister + 22 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_AC-Strom_L3", "int16", "A", "AC-Strom in Ampere L3", 0.01),
 								array($startOffsetRegister + 23 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_Phasen-Frequenz_L1", "int16", "Hz", "Phasen-Frequenz in Hertz", 0.01),
-								array($startOffsetRegister + 24 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_DC-Leistung_L1", "int16", "W", "DC-Leistung in Watt L1"),
-								array($startOffsetRegister + 25 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_DC-Leistung_L2", "int16", "W", "DC-Leistung in Watt L2"),
-								array($startOffsetRegister + 26 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_DC-Leistung_L3", "int16", "W", "DC-Leistung in Watt L3"),
-								array($startOffsetRegister + 27 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_DC-Spannung_L1", "int16", "V", "DC-Spannung in Volt L1", 0.1),
-								array($startOffsetRegister + 28 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_DC-Spannung_L2", "int16", "V", "DC-Spannung in Volt L2", 0.1),
-								array($startOffsetRegister + 29 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_DC-Spannung_L3", "int16", "V", "DC-Spannung in Volt L3", 0.1),
-								array($startOffsetRegister + 30 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_DC-Strom_L1", "int16", "A", "DC-Strom in Ampere L1", 0.01),
-								array($startOffsetRegister + 31 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_DC-Strom_L2", "int16", "A", "DC-Strom in Ampere L2", 0.01),
-								array($startOffsetRegister + 32 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_DC-Strom_L3", "int16", "A", "DC-Strom in Ampere L3", 0.01),
+								array($startOffsetRegister + 24 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_DC-Leistung_1", "int16", "W", "DC-Leistung in Watt DC-Eingang 1"),
+								array($startOffsetRegister + 25 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_DC-Leistung_2", "int16", "W", "DC-Leistung in Watt DC-Eingang 2"),
+								array($startOffsetRegister + 26 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_DC-Leistung_3", "int16", "W", "DC-Leistung in Watt DC-Eingang 3"),
+								array($startOffsetRegister + 27 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_DC-Spannung_1", "int16", "V", "DC-Spannung in Volt DC-Eingang 1", 0.1),
+								array($startOffsetRegister + 28 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_DC-Spannung_2", "int16", "V", "DC-Spannung in Volt DC-Eingang 2", 0.1),
+								array($startOffsetRegister + 29 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_DC-Spannung_3", "int16", "V", "DC-Spannung in Volt DC-Eingang 3", 0.1),
+								array($startOffsetRegister + 30 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_DC-Strom_1", "int16", "A", "DC-Strom in Ampere DC-Eingang 1", 0.01),
+								array($startOffsetRegister + 31 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_DC-Strom_2", "int16", "A", "DC-Strom in Ampere DC-Eingang 2", 0.01),
+								array($startOffsetRegister + 32 + ($i * 34), 1, 3, "WR_".$inverterName[$i]."_DC-Strom_3", "int16", "A", "DC-Strom in Ampere DC-Eingang 3", 0.01),
 							);
 
 							if ($readInverter[$i])
@@ -1592,6 +1592,17 @@ Bit 13  Nicht belegt";
 
 					$this->SendDebug("ClientSocket-Status", "ClientSocket deleted (".$interfaceId_Old.")", 0);
 				}
+
+
+				// S20 / Simple Mode V2: immediately request one complete data update after saving.
+				// This avoids waiting for the first polling interval before values become current.
+				if (defined('E3DC_SIMPLE_MODE_V2') && E3DC_SIMPLE_MODE_V2
+					&& $active && isset($portOpen) && $portOpen
+					&& KR_READY == IPS_GetKernelRunlevel())
+				{
+					IPS_Sleep(250);
+					$this->requestInitialModbusUpdate();
+				}
 			}
 		}
 		/*
@@ -1619,6 +1630,55 @@ Bit 13  Nicht belegt";
 
 				}
 		 */
+		private function requestInitialModbusUpdate(): void
+		{
+			$pendingParents = array($this->InstanceID);
+			$requestCount = 0;
+			$errorCount = 0;
+
+			while (0 < count($pendingParents))
+			{
+				$parentId = array_shift($pendingParents);
+				foreach (IPS_GetChildrenIDs($parentId) as $childId)
+				{
+					$object = IPS_GetObject($childId);
+
+					// Categories can contain further ModBus Address instances.
+					if (0 == $object['ObjectType'])
+					{
+						$pendingParents[] = $childId;
+						continue;
+					}
+
+					if (1 != $object['ObjectType'])
+					{
+						continue;
+					}
+
+					$instance = @IPS_GetInstance($childId);
+					if (!isset($instance['ModuleInfo']['ModuleID']) || MODBUS_ADDRESSES != $instance['ModuleInfo']['ModuleID'])
+					{
+						continue;
+					}
+
+					$requestCount++;
+					if (!@ModBus_RequestRead($childId))
+					{
+						$errorCount++;
+					}
+				}
+			}
+
+			$this->SendDebug("Initial ModBus update", "Requested ".$requestCount." addresses, errors: ".$errorCount, 0);
+
+			// Update calculated/derived values immediately as well, once the mandatory base values exist.
+			if (false !== @IPS_GetObjectIDByIdent("40082", $this->InstanceID)
+				&& false !== @IPS_GetObjectIDByIdent("40085", $this->InstanceID))
+			{
+				$this->CyclicDataUpdate();
+			}
+		}
+
 		private function createModbusInstances($modelRegister_array, $parentId, $gatewayId, $pollCycle, $uniqueIdent = "")
 		{
 			// Workaround für "InstanceInterface not available" Fehlermeldung beim Server-Start...
